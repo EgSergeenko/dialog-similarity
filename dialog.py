@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 import torch
@@ -16,6 +17,15 @@ class Dialog(object):
     turns: list[Turn]
 
 
+@dataclass
+class DialogTriplet(object):
+    anchor_dialog: Dialog
+    dialog_1: Dialog
+    dialog_2: Dialog
+    label: int
+    confidence_score: float
+
+
 def dialog_from_dict(dialog_dict):
     turns = []
     for turn in dialog_dict['turns']:
@@ -26,3 +36,8 @@ def dialog_from_dict(dialog_dict):
         dialog_id=dialog_dict['dialogue_id'],
         turns=turns,
     )
+
+
+def dialog_from_file(dialog_filepath):
+    with open(dialog_filepath) as dialog_file:
+        return dialog_from_dict(json.load(dialog_file))

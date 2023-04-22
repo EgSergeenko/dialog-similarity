@@ -1,14 +1,14 @@
 import json
 from dataclasses import dataclass
 
-import torch
+import numpy as np
 
 
 @dataclass
 class Turn(object):
     actor: str
     utterance: str
-    embedding: torch.Tensor | None
+    embedding: np.ndarray | None
 
 
 @dataclass

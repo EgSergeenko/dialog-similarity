@@ -1,5 +1,7 @@
 from typing import Callable
 
+import numpy as np
+import scipy
 from sklearn.metrics import accuracy_score
 
 from dialog import Dialog, DialogTriplet
@@ -9,6 +11,64 @@ class ExampleMetric(object):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         # computing ...
         return 1.0
+
+
+class AvgEmbeddingDistance(object):
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        embedding_1 = self._get_avg_embedding(dialog_1)
+        embedding_2 = self._get_avg_embedding(dialog_2)
+        return scipy.spatial.distance.cosine(embedding_1, embedding_2)
+
+    def _get_avg_embedding(self, dialog: Dialog) -> np.ndarray:
+        embedding = dialog.turns[0].embedding
+        for i in range(1, len(dialog.turns)):
+            embedding += dialog.turns[i].embedding
+        return embedding / len(dialog.turns)
+
+
+class ConversationalEditDistance(object):
+    def __init__(
+        self,
+        insertion_weight: float = 1.0,
+        deletion_weight: float = 1.0,
+        substitution_weight: float = 2.2,
+    ):
+        self.insertion_weight = insertion_weight
+        self.deletion_weight = deletion_weight
+        self.substitution_weight = substitution_weight
+
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        n, m = len(dialog_1.turns), len(dialog_2.turns)
+        distances = np.zeros((n + 1, m + 1))
+        for i in range(1, n + 1):
+            distances[i][0] = distances[i - 1][0] + self.deletion_weight
+
+        for j in range(1, m + 1):
+            distances[0][j] = distances[0][j - 1] + self.insertion_weight
+
+        for i in range(1, n + 1):
+            for j in range(1, m + 1):
+                insertion_cost = distances[i][j - 1] + self.insertion_weight
+
+                deletion_cost = distances[i - 1][j] + self.deletion_weight
+
+                substitution_cost = np.inf
+
+                if dialog_1.turns[i - 1].actor == dialog_2.turns[j - 1].actor:
+                    cosine_distance = scipy.spatial.distance.cosine(
+                        dialog_1.turns[i - 1].embedding,
+                        dialog_2.turns[j - 1].embedding,
+                    )
+                    cosine_distance *= self.substitution_weight
+                    substitution_cost = distances[i - 1][j - 1] + cosine_distance
+
+                distances[i, j] = min(
+                    insertion_cost,
+                    deletion_cost,
+                    substitution_cost,
+                )
+
+        return distances[n][m]
 
 
 def get_metric_agreement(

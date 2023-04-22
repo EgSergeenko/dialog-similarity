@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from typing import Callable
 
 import numpy as np
@@ -7,13 +8,18 @@ from sklearn.metrics import accuracy_score
 from dialog import Dialog, DialogTriplet
 
 
-class ExampleMetric(object):
+class BaseMetric(ABC):
+    @abstractmethod
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
-        # computing ...
+        ...
+
+
+class ExampleMetric(BaseMetric):
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         return 1.0
 
 
-class AvgEmbeddingDistance(object):
+class AvgEmbeddingDistance(BaseMetric):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         embedding_1 = self._get_avg_embedding(dialog_1)
         embedding_2 = self._get_avg_embedding(dialog_2)
@@ -26,7 +32,7 @@ class AvgEmbeddingDistance(object):
         return embedding / len(dialog.turns)
 
 
-class ConversationalEditDistance(object):
+class ConversationalEditDistance(BaseMetric):
     def __init__(
         self,
         insertion_weight: float = 1.0,
@@ -73,7 +79,7 @@ class ConversationalEditDistance(object):
 
 def get_metric_agreement(
     dialog_triplets: list[DialogTriplet],
-    metric: Callable,
+    metric: BaseMetric,
     confidence_threshold: float,
     inverted_metric: bool = False,
 ) -> float:

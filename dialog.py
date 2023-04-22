@@ -26,7 +26,7 @@ class DialogTriplet(object):
     confidence_score: float
 
 
-def dialog_from_dict(dialog_dict):
+def dialog_from_dict(dialog_dict: dict) -> Dialog:
     turns = []
     for turn in dialog_dict['turns']:
         turns.append(
@@ -38,6 +38,6 @@ def dialog_from_dict(dialog_dict):
     )
 
 
-def dialog_from_file(dialog_filepath):
+def dialog_from_file(dialog_filepath: str) -> Dialog:
     with open(dialog_filepath) as dialog_file:
         return dialog_from_dict(json.load(dialog_file))

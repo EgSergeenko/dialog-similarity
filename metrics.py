@@ -1,15 +1,22 @@
+from typing import Callable
+
 from sklearn.metrics import accuracy_score
+
+from dialog import Dialog, DialogTriplet
 
 
 class ExampleMetric(object):
-    def __call__(self, dialog_1, dialog_2):
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         # computing ...
         return 1.0
 
 
 def get_metric_agreement(
-    dialog_triplets, metric, confidence_threshold, inverted_metric=False,
-):
+    dialog_triplets: list[DialogTriplet],
+    metric: Callable,
+    confidence_threshold: float,
+    inverted_metric: bool = False,
+) -> float:
     labels, predictions = [], []
 
     for dialog_triplet in dialog_triplets:

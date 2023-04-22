@@ -28,8 +28,8 @@ import pandas as pd
     type=click.Path(exists=True, file_okay=True, dir_okay=False),
 )
 def preprocess_dataset(
-    input_dir, output_dir, metadata_path,
-):
+    input_dir: str, output_dir: str, metadata_path: str,
+) -> None:
     sub_dirs = ['dev', 'test', 'train']
 
     os.makedirs(os.path.join(output_dir, 'dialogs'), exist_ok=True)

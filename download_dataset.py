@@ -9,7 +9,7 @@ DATASET_URL = (
 )
 
 
-def download_dataset():
+def download_dataset() -> None:
     response = requests.get(DATASET_URL)
     archive_filename = 'tmp.tar.gz'
     with open(archive_filename, 'wb') as archive_file:

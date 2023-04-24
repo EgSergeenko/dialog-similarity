@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Callable
 
 import numpy as np
 import scipy
@@ -13,10 +12,18 @@ class BaseMetric(ABC):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         ...
 
+    @property
+    @abstractmethod
+    def is_inverted(self) -> bool:
+        ...
+
 
 class ExampleMetric(BaseMetric):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         return 1.0
+
+    def is_inverted(self) -> bool:
+        return False
 
 
 class AvgEmbeddingDistance(BaseMetric):
@@ -24,6 +31,9 @@ class AvgEmbeddingDistance(BaseMetric):
         embedding_1 = self._get_avg_embedding(dialog_1)
         embedding_2 = self._get_avg_embedding(dialog_2)
         return scipy.spatial.distance.cosine(embedding_1, embedding_2)
+
+    def is_inverted(self) -> bool:
+        return False
 
     def _get_avg_embedding(self, dialog: Dialog) -> np.ndarray:
         embedding = dialog.turns[0].embedding
@@ -76,12 +86,14 @@ class ConversationalEditDistance(BaseMetric):
 
         return distances[n][m]
 
+    def is_inverted(self) -> bool:
+        return False
+
 
 def get_metric_agreement(
     dialog_triplets: list[DialogTriplet],
     metric: BaseMetric,
     confidence_threshold: float,
-    inverted_metric: bool = False,
 ) -> float:
     labels, predictions = [], []
 
@@ -98,7 +110,7 @@ def get_metric_agreement(
         prediction = 1
         if score_1 < score_2:
             prediction = 0
-        if inverted_metric:
+        if metric.is_inverted:
             prediction = ~prediction
         predictions.append(prediction)
 

@@ -128,7 +128,7 @@ def get_metric_agreement(
         if score_1 < score_2:
             prediction = 0
         if metric.is_inverted:
-            prediction = ~prediction
+            prediction = 1 - prediction
         predictions.append(prediction)
 
     return accuracy_score(labels, predictions)

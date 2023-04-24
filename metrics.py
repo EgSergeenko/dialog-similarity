@@ -21,17 +21,43 @@ class ExampleMetric(BaseMetric):
         return 1.0
 
 
-class AvgEmbeddingDistance(BaseMetric):
+class AverageEmbeddingMetric(BaseMetric):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
-        embedding_1 = self._get_avg_embedding(dialog_1)
-        embedding_2 = self._get_avg_embedding(dialog_2)
-        return scipy.spatial.distance.cosine(embedding_1, embedding_2)
+        raise NotImplementedError()
 
-    def _get_avg_embedding(self, dialog: Dialog) -> np.ndarray:
+    def get_average_embedding(self, dialog: Dialog) -> np.ndarray:
         embedding = dialog.turns[0].embedding
         for i in range(1, len(dialog.turns)):
             embedding += dialog.turns[i].embedding
         return embedding / len(dialog.turns)
+
+
+class CosineDistance(AverageEmbeddingMetric):
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        return scipy.spatial.distance.cosine(
+            self.get_average_embedding(dialog_1),
+            self.get_average_embedding(dialog_2),
+        )
+
+
+class LpDistance(AverageEmbeddingMetric):
+    def __init__(self, is_inverted: bool, p: int) -> None:
+        super().__init__(is_inverted)
+        self.p = p
+
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        return scipy.spatial.distance.minkowski(
+            self.get_average_embedding(dialog_1),
+            self.get_average_embedding(dialog_2),
+            p=self.p,
+        )
+
+
+class DotProductSimilarity(AverageEmbeddingMetric):
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        embedding_1 = self.get_average_embedding(dialog_1)
+        embedding_2 = self.get_average_embedding(dialog_2)
+        return embedding_1 @ embedding_2
 
 
 class ConversationalEditDistance(BaseMetric):

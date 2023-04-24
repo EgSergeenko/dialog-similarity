@@ -8,13 +8,11 @@ from dialog import Dialog, DialogTriplet
 
 
 class BaseMetric(ABC):
+    def __init__(self, is_inverted: bool) -> None:
+        self.is_inverted = is_inverted
+
     @abstractmethod
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
-        ...
-
-    @property
-    @abstractmethod
-    def is_inverted(self) -> bool:
         ...
 
 
@@ -22,18 +20,12 @@ class ExampleMetric(BaseMetric):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         return 1.0
 
-    def is_inverted(self) -> bool:
-        return False
-
 
 class AvgEmbeddingDistance(BaseMetric):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         embedding_1 = self._get_avg_embedding(dialog_1)
         embedding_2 = self._get_avg_embedding(dialog_2)
         return scipy.spatial.distance.cosine(embedding_1, embedding_2)
-
-    def is_inverted(self) -> bool:
-        return False
 
     def _get_avg_embedding(self, dialog: Dialog) -> np.ndarray:
         embedding = dialog.turns[0].embedding
@@ -45,10 +37,12 @@ class AvgEmbeddingDistance(BaseMetric):
 class ConversationalEditDistance(BaseMetric):
     def __init__(
         self,
+        is_inverted: bool,
         insertion_weight: float = 1.0,
         deletion_weight: float = 1.0,
         substitution_weight: float = 2.2,
-    ):
+    ) -> None:
+        super().__init__(is_inverted)
         self.insertion_weight = insertion_weight
         self.deletion_weight = deletion_weight
         self.substitution_weight = substitution_weight
@@ -85,9 +79,6 @@ class ConversationalEditDistance(BaseMetric):
                 )
 
         return distances[n][m]
-
-    def is_inverted(self) -> bool:
-        return False
 
 
 def get_metric_agreement(

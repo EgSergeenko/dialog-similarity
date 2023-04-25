@@ -90,6 +90,18 @@ class ConversationalEditDistance(BaseMetric):
 
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
+        distances = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
+        return distances[n][m]
+
+    def visualize(self, dialog_1: Dialog, dialog_2: Dialog) -> None:
+        n, m = len(dialog_1.turns), len(dialog_2.turns)
+        distances = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
+        # logic...
+        pass
+
+    def _compute_distance_matrix(
+        self, dialog_1: Dialog, dialog_2: Dialog, n: int, m: int,
+    ) -> np.ndarray:
         distances = np.zeros((n + 1, m + 1))
         for i in range(1, n + 1):
             distances[i][0] = distances[i - 1][0] + self.deletion_weight
@@ -118,8 +130,7 @@ class ConversationalEditDistance(BaseMetric):
                     deletion_cost,
                     substitution_cost,
                 )
-
-        return distances[n][m]
+        return distances
 
 
 def get_metric_agreement(

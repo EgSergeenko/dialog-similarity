@@ -14,6 +14,7 @@ class Turn(object):
 @dataclass
 class Dialog(object):
     dialog_id: str
+    embedding: np.ndarray | None
     turns: list[Turn]
 
 
@@ -35,6 +36,7 @@ def dialog_from_dict(dialog_dict: dict) -> Dialog:
     return Dialog(
         dialog_id=dialog_dict['dialogue_id'],
         turns=turns,
+        embedding=None,
     )
 
 

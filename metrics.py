@@ -60,7 +60,7 @@ class CosineDistance(EmbeddingMetric):
 
 class LpDistance(EmbeddingMetric):
     def __init__(
-            self, is_inverted: bool, embedding_type: str, p: int,
+        self, is_inverted: bool, embedding_type: str, p: int,
     ) -> None:
         super().__init__(is_inverted, embedding_type)
         self.p = p
@@ -96,7 +96,9 @@ class ConversationalEditDistance(BaseMetric):
         distances, _ = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
         return distances[n][m]
 
-    def visualize(self, dialog_1: Dialog, dialog_2: Dialog) -> None:
+    def visualize(
+        self, dialog_1: Dialog, dialog_2: Dialog, output_filepath: str,
+    ) -> None:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
         distances, actions = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
         action_list = self._get_actions_list(actions, n, m)
@@ -130,7 +132,7 @@ class ConversationalEditDistance(BaseMetric):
 
         table = [[x, y] for x, y in zip(dialog_1_list, dialog_2_list)]
         html_str = tabulate(table, tablefmt='html')
-        with open('teste_rendered.html', 'w') as file:
+        with open(output_filepath, 'w') as file:
             file.write(html_str)
 
     def _get_actions_list(self, actions: dict, n: int, m: int) -> list:

@@ -3,3 +3,5 @@ conversation-similarity/
 venv/
 
 .mypy_cache/
+
+assets/

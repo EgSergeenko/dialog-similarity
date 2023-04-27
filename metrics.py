@@ -5,6 +5,9 @@ import scipy
 from sklearn.metrics import accuracy_score
 
 from dialog import Dialog, DialogTriplet
+from collections import defaultdict
+
+from tabulate import tabulate
 
 
 class BaseMetric(ABC):
@@ -57,7 +60,7 @@ class CosineDistance(EmbeddingMetric):
 
 class LpDistance(EmbeddingMetric):
     def __init__(
-        self, is_inverted: bool, embedding_type: str, p: int,
+            self, is_inverted: bool, embedding_type: str, p: int,
     ) -> None:
         super().__init__(is_inverted, embedding_type)
         self.p = p
@@ -95,13 +98,66 @@ class ConversationalEditDistance(BaseMetric):
 
     def visualize(self, dialog_1: Dialog, dialog_2: Dialog) -> None:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
-        distances = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
-        # logic...
+        distances, actions = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
+        action_list = self._get_actions_list(actions, n, m)
+        action_list.reverse()
+        i, j = 0, 0
+        dialog_1_list = []
+        dialog_2_list = []
+
+        for action in action_list:
+            if action == "I":
+                dialog_1_list.append("Insertion \n\n")
+                dialog_2_list.append(f"{dialog_2.turns[j].actor}:{dialog_2.turns[j].utterance} \n\n")
+                dialog_1_list.append("-"*20)
+                dialog_2_list.append("-"*20)
+                j += 1
+
+            if action == "D":
+                dialog_2_list.append("Deletion")
+                dialog_1_list.append(f"{dialog_1.turns[i].actor}:{dialog_1.turns[i].utterance} \n\n")
+                dialog_1_list.append("-" * 20)
+                dialog_2_list.append("-" * 20)
+                i += 1
+
+            if action == "S":
+                dialog_1_list.append(f"{dialog_1.turns[i].actor}:{dialog_1.turns[i].utterance} \n\n")
+                dialog_2_list.append(f"{dialog_2.turns[j].actor}:{dialog_2.turns[j].utterance} \n\n")
+                dialog_1_list.append("-" * 20)
+                dialog_2_list.append("-" * 20)
+                j += 1
+                i += 1
+
+        table = [[x, y] for x, y in zip(dialog_1_list, dialog_2_list)]
+        html_str = tabulate(table, tablefmt='html')
+        with open('teste_rendered.html', 'w') as file:
+            file.write(html_str)
+
         pass
 
+    def _get_actions_list(self, actions: dict, n: int, m: int) -> list:
+        actions_list = []
+        i, j = n, m
+        while i > 0 and j > 0:
+            print(i, j)
+            last_action = actions[i][j]
+            actions_list.append(actions[i][j])
+            if last_action == "I":
+                j -= 1
+                continue
+            if last_action == "D":
+                i -= 1
+                continue
+            if last_action == "S":
+                i -= 1
+                j -= 1
+                continue
+        return actions_list
+
     def _compute_distance_matrix(
-        self, dialog_1: Dialog, dialog_2: Dialog, n: int, m: int,
-    ) -> np.ndarray:
+            self, dialog_1: Dialog, dialog_2: Dialog, n: int, m: int,
+    ) -> (np.ndarray, dict):
+        actions_table = defaultdict(dict)
         distances = np.zeros((n + 1, m + 1))
         for i in range(1, n + 1):
             distances[i][0] = distances[i - 1][0] + self.deletion_weight
@@ -124,13 +180,12 @@ class ConversationalEditDistance(BaseMetric):
                     )
                     cosine_distance *= self.substitution_weight
                     substitution_cost = distances[i - 1][j - 1] + cosine_distance
-
-                distances[i, j] = min(
-                    insertion_cost,
-                    deletion_cost,
-                    substitution_cost,
-                )
-        return distances
+                actions = np.array([insertion_cost, deletion_cost, substitution_cost])
+                actions_word = ["I", "D", "S"]
+                index_min = np.argmin(actions)
+                actions_table[i][j] = actions_word[index_min]
+                distances[i, j] = actions[index_min]
+        return distances, actions_table
 
 
 def get_metric_agreement(

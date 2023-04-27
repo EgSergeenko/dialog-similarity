@@ -133,13 +133,10 @@ class ConversationalEditDistance(BaseMetric):
         with open('teste_rendered.html', 'w') as file:
             file.write(html_str)
 
-        pass
-
     def _get_actions_list(self, actions: dict, n: int, m: int) -> list:
         actions_list = []
         i, j = n, m
         while i > 0 and j > 0:
-            print(i, j)
             last_action = actions[i][j]
             actions_list.append(actions[i][j])
             if last_action == "I":

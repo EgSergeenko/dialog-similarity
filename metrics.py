@@ -93,7 +93,7 @@ class ConversationalEditDistance(BaseMetric):
 
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
-        distances = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
+        distances, _ = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
         return distances[n][m]
 
     def visualize(self, dialog_1: Dialog, dialog_2: Dialog) -> None:

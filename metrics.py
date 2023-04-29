@@ -228,9 +228,9 @@ class StructuralEditDistance(EditDistance):
                 dialog_1_acts = dialog_1.turns[i - 1].acts_to_string()
                 dialog_2_acts = dialog_2.turns[j - 1].acts_to_string()
 
-                substitution_cost = self.substitution_weight
-                if dialog_1_acts == dialog_2_acts:
-                    substitution_cost = 0
+                substitution_cost = distances[i - 1][j - 1]
+                if dialog_1_acts != dialog_2_acts:
+                    substitution_cost += self.substitution_weight
 
                 distances[i, j] = min(
                     insertion_cost,
@@ -239,7 +239,6 @@ class StructuralEditDistance(EditDistance):
                 )
 
         return distances
-
 
 
 def get_metric_agreement(

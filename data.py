@@ -1,6 +1,9 @@
 import json
 import os
 
+from sentence_transformers import SentenceTransformer
+from tqdm import tqdm
+
 from dialog import dialog_from_dict, Dialog
 
 
@@ -14,6 +17,15 @@ class SGDDataset(object):
 
     def __len__(self) -> int:
         return len(self.dialogs)
+
+    def compute_embeddings(
+        self,
+        cache_dir: str,
+        model: SentenceTransformer,
+        model_name: str,
+    ) -> None:
+        for dialog in tqdm(self.dialogs):
+            dialog.compute_embeddings(cache_dir, model, model_name)
 
     def _preprocess_dataset(self) -> list[Dialog]:
         sub_dirs = ['dev', 'test', 'train']

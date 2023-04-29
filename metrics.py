@@ -82,11 +82,13 @@ class ConversationalEditDistance(BaseMetric):
     def __init__(
         self,
         is_inverted: bool,
+        normalize: bool,
         insertion_weight: float = 1.0,
         deletion_weight: float = 1.0,
         substitution_weight: float = 2.2,
     ) -> None:
         super().__init__(is_inverted)
+        self.normalize = normalize
         self.insertion_weight = insertion_weight
         self.deletion_weight = deletion_weight
         self.substitution_weight = substitution_weight
@@ -94,6 +96,8 @@ class ConversationalEditDistance(BaseMetric):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
         distances, _ = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
+        if self.normalize:
+            return distances[n][m] / max(n, m)
         return distances[n][m]
 
     def visualize(

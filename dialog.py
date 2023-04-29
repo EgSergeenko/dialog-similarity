@@ -1,5 +1,6 @@
 import json
 import os
+from collections import OrderedDict
 from dataclasses import dataclass
 
 import numpy as np
@@ -7,10 +8,31 @@ from sentence_transformers import SentenceTransformer
 
 
 @dataclass
+class Act(object):
+    intent: str
+    slot_type: str
+
+
+@dataclass
 class Turn(object):
     actor: str
     utterance: str
     embedding: np.ndarray | None
+    acts: list[Act]
+
+    def acts_to_string(self) -> str:
+        intent_slot_mapping = OrderedDict()
+        for act in self.acts:
+            if act.intent not in intent_slot_mapping:
+                intent_slot_mapping[act.intent] = []
+            intent_slot_mapping[act.intent].append(act.slot_type)
+
+        intent_strings = []
+        for intent, slots in intent_slot_mapping.items():
+            slots_string = '_'.join(sorted(slots))
+            intent_string = '{0}_{1}'.format(intent, slots_string)
+            intent_strings.append(intent_string.strip('_'))
+        return '_'.join(intent_strings)
 
 
 @dataclass
@@ -18,6 +40,7 @@ class Dialog(object):
     dialog_id: str
     embedding: np.ndarray | None
     turns: list[Turn]
+    services: list[str]
 
     def compute_embeddings(
         self,
@@ -77,16 +100,32 @@ def dialog_from_dict(dialog_dict: dict) -> Dialog:
             actor = 'SYSTEM'
             if dialog_dict['turns']['speaker'][idx] == 0:
                 actor = 'USER'
-            turns.append(Turn(actor, utterance, None))
+            turns.append(
+                Turn(
+                    actor=actor,
+                    utterance=utterance,
+                    embedding=None,
+                    acts=[],
+                ),
+            )
     else:
         for turn in dialog_dict['turns']:
+            acts = []
+            for frame in turn['frames']:
+                acts.extend([*frame['actions']])
             turns.append(
-                Turn(turn['speaker'], turn['utterance'], None),
+                Turn(
+                    actor=turn['speaker'],
+                    utterance=turn['utterance'],
+                    embedding=None,
+                    acts=[Act(act['act'], act['slot']) for act in acts],
+                ),
             )
     return Dialog(
         dialog_id=dialog_dict['dialogue_id'].split('.')[0],
         turns=turns,
         embedding=None,
+        services=dialog_dict['services'],
     )
 
 

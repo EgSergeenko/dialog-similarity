@@ -78,14 +78,14 @@ class DotProductSimilarity(EmbeddingMetric):
         return self.get_embedding(dialog_1) @ self.get_embedding(dialog_2)
 
 
-class ConversationalEditDistance(BaseMetric):
+class EditDistance(BaseMetric):
     def __init__(
         self,
         is_inverted: bool,
         normalize: bool,
         insertion_weight: float = 1.0,
         deletion_weight: float = 1.0,
-        substitution_weight: float = 2.2,
+        substitution_weight: float = 2.0,
     ) -> None:
         super().__init__(is_inverted)
         self.normalize = normalize
@@ -93,6 +93,12 @@ class ConversationalEditDistance(BaseMetric):
         self.deletion_weight = deletion_weight
         self.substitution_weight = substitution_weight
 
+    @abstractmethod
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        ...
+
+
+class ConversationalEditDistance(EditDistance):
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
         distances, _ = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
@@ -189,6 +195,51 @@ class ConversationalEditDistance(BaseMetric):
                 actions_table[i][j] = actions_word[index_min]
                 distances[i, j] = actions[index_min]
         return distances, actions_table
+
+
+class StructuralEditDistance(EditDistance):
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        n, m = len(dialog_1.turns), len(dialog_2.turns)
+        distances = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
+        if self.normalize:
+            return distances[n][m] / max(n, m)
+        return distances[n][m]
+
+    def _compute_distance_matrix(
+        self,
+        dialog_1: Dialog,
+        dialog_2: Dialog,
+        n: int,
+        m: int
+    ) -> np.ndarray:
+        distances = np.zeros((n + 1, m + 1))
+        for i in range(1, n + 1):
+            distances[i][0] = distances[i - 1][0] + self.deletion_weight
+
+        for j in range(1, m + 1):
+            distances[0][j] = distances[0][j - 1] + self.insertion_weight
+
+        for i in range(1, n + 1):
+            for j in range(1, m + 1):
+                insertion_cost = distances[i][j - 1] + self.insertion_weight
+
+                deletion_cost = distances[i - 1][j] + self.deletion_weight
+
+                dialog_1_acts = dialog_1.turns[i - 1].acts_to_string()
+                dialog_2_acts = dialog_2.turns[j - 1].acts_to_string()
+
+                substitution_cost = self.substitution_weight
+                if dialog_1_acts == dialog_2_acts:
+                    substitution_cost = 0
+
+                distances[i, j] = min(
+                    insertion_cost,
+                    deletion_cost,
+                    substitution_cost,
+                )
+
+        return distances
+
 
 
 def get_metric_agreement(

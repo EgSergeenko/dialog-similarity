@@ -30,7 +30,7 @@ import pandas as pd
 def preprocess_dataset(
     input_dir: str, output_dir: str, metadata_path: str,
 ) -> None:
-    sub_dirs = ['dev', 'test', 'train']
+    sub_dirs = ['train']
 
     os.makedirs(os.path.join(output_dir, 'dialogs'), exist_ok=True)
 

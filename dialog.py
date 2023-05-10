@@ -19,6 +19,7 @@ class Turn(object):
     utterance: str
     embedding: np.ndarray | None
     acts: list[Act]
+    cluster: int | None
 
     def acts_to_string(self) -> str:
         intent_slot_mapping = OrderedDict()
@@ -72,6 +73,12 @@ class Dialog(object):
                 np.save(embedding_filepath, embedding)
             self.turns[idx].embedding = embedding
 
+    def load_clusters(self, clusters: list[int]) -> None:
+        if len(clusters) != len(self.turns):
+            raise ValueError('n_clusters != n_turns')
+        for idx in range(len(clusters)):
+            self.turns[idx].cluster = clusters[idx]
+
 
 @dataclass
 class DialogTriplet(object):
@@ -91,6 +98,16 @@ class DialogTriplet(object):
         self.dialog_1.compute_embeddings(cache_dir, model, model_name)
         self.dialog_2.compute_embeddings(cache_dir, model, model_name)
 
+    def load_clusters(self, clustering: dict[str, list[int]]) -> None:
+        dialogs = [self.anchor_dialog, self.dialog_1, self.dialog_2]
+        for dialog in dialogs:
+            if dialog.dialog_id not in clustering:
+                raise ValueError(
+                    'Clusters for {0} not found'.format(dialog.dialog_id),
+                )
+        for dialog in dialogs:
+            dialog.load_clusters(clustering[dialog.dialog_id])
+
 
 def dialog_from_dict(dialog_dict: dict) -> Dialog:
     turns = []
@@ -106,6 +123,7 @@ def dialog_from_dict(dialog_dict: dict) -> Dialog:
                     utterance=utterance,
                     embedding=None,
                     acts=[],
+                    cluster=None,
                 ),
             )
     else:
@@ -119,6 +137,7 @@ def dialog_from_dict(dialog_dict: dict) -> Dialog:
                     utterance=turn['utterance'],
                     embedding=None,
                     acts=[Act(act['act'], act['slot']) for act in acts],
+                    cluster=None,
                 ),
             )
     return Dialog(

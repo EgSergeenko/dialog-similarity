@@ -11,6 +11,7 @@ class SGDDataset(object):
     def __init__(self, dataset_dir: str) -> None:
         self.dataset_dir = dataset_dir
         self.dialogs = self._preprocess_dataset()
+        self.id_2_idx = self._create_mapping()
 
     def __getitem__(self, idx: int) -> Dialog:
         return self.dialogs[idx]
@@ -27,8 +28,22 @@ class SGDDataset(object):
         for dialog in tqdm(self.dialogs):
             dialog.compute_embeddings(cache_dir, model, model_name)
 
+    def load_clusters(self, clustering_filepath: str) -> None:
+        with open(clustering_filepath) as clustering_file:
+            clustering = json.load(clustering_file)
+        for dialog_id, clusters in clustering.items():
+            dialog_idx = self.id_2_idx[dialog_id]
+            for idx in range(len(self.dialogs[dialog_idx].turns)):
+                self.dialogs[dialog_idx].turns[idx].cluster = clusters[idx]
+
+    def _create_mapping(self) -> dict[str, int]:
+        id_2_idx = {}
+        for idx, dialog in enumerate(self.dialogs):
+            id_2_idx[dialog.dialog_id] = idx
+        return id_2_idx
+
     def _preprocess_dataset(self) -> list[Dialog]:
-        sub_dirs = ['dev', 'test', 'train']
+        sub_dirs = ['train']
 
         dialogs_filepaths = []
         for sub_dir in sub_dirs:

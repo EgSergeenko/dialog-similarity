@@ -4,7 +4,8 @@ from collections import OrderedDict
 from dataclasses import dataclass
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
+from model import Embedder
 
 
 @dataclass
@@ -46,7 +47,7 @@ class Dialog(object):
     def compute_embeddings(
         self,
         cache_dir: str,
-        model: SentenceTransformer,
+        model: Embedder,
         model_name: str,
     ) -> None:
         document = ' '.join([turn.utterance for turn in self.turns])
@@ -56,7 +57,7 @@ class Dialog(object):
         if os.path.isfile(embedding_filepath):
             self.embedding = np.load(embedding_filepath)
         else:
-            self.embedding = model.encode([document])[0]
+            self.embedding = model(document)
             np.save(embedding_filepath, self.embedding)
 
         for idx, turn in enumerate(self.turns):
@@ -69,7 +70,7 @@ class Dialog(object):
             if os.path.isfile(embedding_filepath):
                 embedding = np.load(embedding_filepath)
             else:
-                embedding = model.encode([turn.utterance])[0]
+                embedding = model(turn.utterance)
                 np.save(embedding_filepath, embedding)
             self.turns[idx].embedding = embedding
 
@@ -91,7 +92,7 @@ class DialogTriplet(object):
     def compute_embeddings(
         self,
         cache_dir: str,
-        model: SentenceTransformer,
+        model: Embedder,
         model_name: str,
     ) -> None:
         self.anchor_dialog.compute_embeddings(cache_dir, model, model_name)

@@ -23,14 +23,15 @@ class Turn(object):
     cluster: int | None
 
     def acts_to_string(self) -> str:
-        intent_slot_mapping = OrderedDict()
+        intent_slot_mapping = {}
         for act in self.acts:
             if act.intent not in intent_slot_mapping:
                 intent_slot_mapping[act.intent] = []
             intent_slot_mapping[act.intent].append(act.slot_type)
 
         intent_strings = []
-        for intent, slots in intent_slot_mapping.items():
+        for intent in sorted(intent_slot_mapping.keys()):
+            slots = intent_slot_mapping[intent]
             slots_string = '_'.join(sorted(slots))
             intent_string = '{0}_{1}'.format(intent, slots_string)
             intent_strings.append(intent_string.strip('_'))

@@ -3,19 +3,20 @@ import torch
 from sentence_transformers import SentenceTransformer
 from transformers import PreTrainedTokenizer
 from transformers.models.bert import BertModel
+from transformers.models.roberta import RobertaModel
 
 
 class Embedder(object):
     def __init__(
         self,
-        model: SentenceTransformer | BertModel,
+        model: SentenceTransformer | BertModel | RobertaModel,
         tokenizer: PreTrainedTokenizer | None,
         device: str = 'cpu',
     ) -> None:
-        if isinstance(model, BertModel) and tokenizer is None:
-            raise ValueError('For this model class fill tokenizer param.')
 
         self.model = model
+        if self._is_bert() and tokenizer is None:
+            raise ValueError('For this model class fill tokenizer param.')
         self.tokenizer = tokenizer
         self.device = device
 
@@ -26,7 +27,7 @@ class Embedder(object):
 
     @torch.no_grad()
     def __call__(self, text: str) -> np.ndarray:
-        if isinstance(self.model, BertModel):
+        if self._is_bert():
             return self._inference_bert(text)
         return self._inference_sentence_transformer(text)
 
@@ -40,3 +41,6 @@ class Embedder(object):
 
     def _inference_sentence_transformer(self, text: str) -> np.ndarray:
         return self.model.encode([text])[0]
+
+    def _is_bert(self) -> bool:
+        return isinstance(self.model, BertModel) or isinstance(self.model, RobertaModel)

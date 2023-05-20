@@ -198,6 +198,24 @@ class ConversationalEditDistance(EditDistance):
 
 
 class StructuralEditDistance(EditDistance):
+    def __init__(
+        self,
+        is_inverted: bool,
+        normalize: bool,
+        insertion_weight: float = 1.0,
+        deletion_weight: float = 1.0,
+        substitution_weight: float = 2.0,
+        transpositions: bool = False,
+    ):
+        super().__init__(
+            is_inverted,
+            normalize,
+            insertion_weight,
+            deletion_weight,
+            substitution_weight,
+        )
+        self.transpositions = transpositions
+
     def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
         n, m = len(dialog_1.turns), len(dialog_2.turns)
         distances = self._compute_distance_matrix(dialog_1, dialog_2, n, m)
@@ -219,24 +237,46 @@ class StructuralEditDistance(EditDistance):
         for j in range(1, m + 1):
             distances[0][j] = distances[0][j - 1] + self.insertion_weight
 
+        sigma = set()
+
+        sigma.update([turn.acts_to_string() for turn in dialog_1.turns])
+        sigma.update([turn.acts_to_string() for turn in dialog_2.turns])
+
+        last_left_t = {c: 0 for c in sigma}
+
         for i in range(1, n + 1):
+            last_right_buf = 0
             for j in range(1, m + 1):
+                dialog_1_acts = dialog_1.turns[i - 1].acts_to_string()
+                dialog_2_acts = dialog_2.turns[j - 1].acts_to_string()
+
+                last_left = last_left_t[dialog_2_acts]
+                last_right = last_right_buf
+
+                if dialog_1_acts == dialog_2_acts:
+                    last_right_buf = j
+
                 insertion_cost = distances[i][j - 1] + self.insertion_weight
 
                 deletion_cost = distances[i - 1][j] + self.deletion_weight
-
-                dialog_1_acts = dialog_1.turns[i - 1].acts_to_string()
-                dialog_2_acts = dialog_2.turns[j - 1].acts_to_string()
 
                 substitution_cost = distances[i - 1][j - 1]
                 if dialog_1_acts != dialog_2_acts:
                     substitution_cost += self.substitution_weight
 
+                transposition_cost = substitution_cost + 1
+                if self.transpositions and last_left > 0 and last_right > 0:
+                    transposition_cost = distances[last_left - 1][last_right - 1]
+                    transposition_cost += i - last_left + j - last_right - 1
+
                 distances[i, j] = min(
                     insertion_cost,
                     deletion_cost,
                     substitution_cost,
+                    transposition_cost,
                 )
+
+                last_left_t[dialog_1_acts] = i
 
         return distances
 

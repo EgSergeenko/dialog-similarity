@@ -206,7 +206,7 @@ class StructuralEditDistance(EditDistance):
         deletion_weight: float = 1.0,
         substitution_weight: float = 2.0,
         transpositions: bool = False,
-    ):
+    ) -> None:
         super().__init__(
             is_inverted,
             normalize,
@@ -239,16 +239,16 @@ class StructuralEditDistance(EditDistance):
 
         sigma = set()
 
-        sigma.update([turn.acts_to_string() for turn in dialog_1.turns])
-        sigma.update([turn.acts_to_string() for turn in dialog_2.turns])
+        sigma.update([turn.acts_string for turn in dialog_1.turns])
+        sigma.update([turn.acts_string for turn in dialog_2.turns])
 
         last_left_t = {c: 0 for c in sigma}
 
         for i in range(1, n + 1):
             last_right_buf = 0
             for j in range(1, m + 1):
-                dialog_1_acts = dialog_1.turns[i - 1].acts_to_string()
-                dialog_2_acts = dialog_2.turns[j - 1].acts_to_string()
+                dialog_1_acts = dialog_1.turns[i - 1].acts_string
+                dialog_2_acts = dialog_2.turns[j - 1].acts_string
 
                 last_left = last_left_t[dialog_2_acts]
                 last_right = last_right_buf

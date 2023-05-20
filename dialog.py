@@ -1,7 +1,6 @@
 import json
 import os
-from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -21,8 +20,12 @@ class Turn(object):
     embedding: np.ndarray | None
     acts: list[Act]
     cluster: int | None
+    acts_string: str = field(init=False)
 
-    def acts_to_string(self) -> str:
+    def __post_init__(self) -> None:
+        self.acts_string = self._acts_to_string()
+
+    def _acts_to_string(self) -> str:
         intent_slot_mapping = {}
         for act in self.acts:
             if act.intent not in intent_slot_mapping:

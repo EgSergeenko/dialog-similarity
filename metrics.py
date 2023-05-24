@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import Counter
 
 import numpy as np
 import scipy
@@ -279,6 +280,48 @@ class StructuralEditDistance(EditDistance):
                 last_left_t[dialog_1_acts] = i
 
         return distances
+
+
+class HammingSubsequenceDistance(BaseMetric):
+    def __init__(
+        self,
+        is_inverted: bool,
+        n_gram_sizes: tuple[int] | list[int],
+    ) -> None:
+        super().__init__(is_inverted)
+        self.n_gram_sizes = n_gram_sizes
+
+    def __call__(self, dialog_1: Dialog, dialog_2: Dialog) -> float:
+        dialog_1_n_grams, dialog_2_n_grams = Counter(), Counter()
+        for n in self.n_gram_sizes:
+            dialog_1_n_grams.update(self._get_n_grams(dialog_1, n))
+            dialog_2_n_grams.update(self._get_n_grams(dialog_2, n))
+        total = dialog_1_n_grams.total() + dialog_2_n_grams.total()
+        difference = self._n_grams_difference(
+            dialog_1_n_grams, dialog_2_n_grams,
+        )
+        return 1 - (difference / total)
+
+    def _get_n_grams(self, dialog: Dialog, n: int) -> Counter[tuple, int]:
+        if n > len(dialog.turns):
+            return Counter()
+        acts = [turn.acts_string for turn in dialog.turns]
+        n_grams = Counter()
+        for idx in range(0, len(acts) - n + 1):
+            n_gram = tuple(acts[idx: idx + n])
+            n_grams[n_gram] += 1
+        return n_grams
+
+    def _n_grams_difference(
+        self,
+        n_grams_1: Counter[tuple, str],
+        n_grams_2: Counter[tuple, str],
+    ) -> int:
+        n_grams_1.subtract(n_grams_2)
+        difference = 0
+        for count in n_grams_1.values():
+            difference += abs(count)
+        return difference
 
 
 def get_metric_agreement(

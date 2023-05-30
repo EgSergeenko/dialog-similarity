@@ -2,9 +2,11 @@ import json
 import os
 from copy import deepcopy
 
+import numpy as np
 import torch
+from torch.nn.utils.rnn import pad_sequence
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 
 from dialog import Dialog, dialog_from_dict
@@ -17,7 +19,7 @@ class TranslationModel(object):
         model_name: str,
         device: str,
         num_beams: int = 3,
-        num_return_utterances: int =1,
+        num_return_utterances: int = 1,
     ) -> None:
         if not torch.cuda.is_available() and 'cuda' in device:
             device = 'cpu'
@@ -64,8 +66,13 @@ class SGDDataset(Dataset):
         self.augmented_dialogs = self._augment_dialogs()
         self.id_2_idx = self._create_mapping()
 
-    def __getitem__(self, idx: int) -> Dialog:
-        return self.dialogs[idx]
+    def __getitem__(self, idx: int) -> (torch.Tensor, torch.Tensor):
+        dialog = self.dialogs[idx]
+        augmented_dialog = self.augmented_dialogs[idx]
+        return (
+            self._get_dialog_tensor(dialog),
+            self._get_dialog_tensor(augmented_dialog),
+        )
 
     def __len__(self) -> int:
         return len(self.dialogs)
@@ -161,3 +168,29 @@ class SGDDataset(Dataset):
             dialog.turns[idx].utterance = utterances[idx]
 
         return dialog
+
+    def _get_dialog_tensor(self, dialog: Dialog) -> torch.Tensor:
+        features = np.array([turn.embedding for turn in dialog.turns])
+        return torch.Tensor(features)
+
+
+def collate_fn(
+    batch: list[tuple[torch.Tensor, torch.Tensor]]
+) -> torch.Tensor:
+    dialogs = [sample[0] for sample in batch]
+    augmented_dialogs = [sample[1] for sample in batch]
+    return pad_sequence(
+        dialogs + augmented_dialogs,
+        batch_first=True,
+    )
+
+
+def get_dataloader(dataset: Dataset, batch_size: int) -> DataLoader:
+    return DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        pin_memory=True,
+        shuffle=True,
+        drop_last=True,
+        collate_fn=collate_fn,
+    )

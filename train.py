@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.optim import Optimizer
+from torch.utils.data import DataLoader
 from pytorch_metric_learning.losses import BaseMetricLossFunction
 
 
@@ -28,9 +29,8 @@ def train_step(
 ) -> float:
     optimizer.zero_grad()
 
-    batch_size = batch.size(0)
     # [0, 1, ... n - 1, 0, 1 ... n - 1]
-    labels = torch.LongTensor(list(range(batch_size // 2)) * 2)
+    labels = torch.LongTensor(list(range(batch.size(0) // 2)) * 2)
     batch, labels = batch.to(device), labels.to(device)
     embeddings = model(batch)
 
@@ -39,3 +39,60 @@ def train_step(
     optimizer.step()
 
     return loss.item()
+
+
+@torch.no_grad()
+def eval_step(
+    model: GRUEmbedder,
+    batch: torch.Tensor,
+    criterion: BaseMetricLossFunction,
+    device: torch.device,
+) -> float:
+    labels = torch.LongTensor(list(range(batch.size(0) // 2)) * 2)
+    batch, labels = batch.to(device), labels.to(device)
+    embeddings = model(batch)
+
+    loss = criterion(embeddings, labels)
+
+    return loss.item()
+
+
+def train_epoch(
+    model: GRUEmbedder,
+    dataloader: DataLoader,
+    criterion: BaseMetricLossFunction,
+    optimizer: Optimizer,
+    device: torch.device,
+) -> float:
+    model.train()
+    total_loss = 0
+    for batch in dataloader:
+        step_loss = train_step(
+            model=model,
+            batch=batch,
+            criterion=criterion,
+            optimizer=optimizer,
+            device=device,
+        )
+        total_loss += step_loss
+    return total_loss / len(dataloader)
+
+
+def eval_epoch(
+    model: GRUEmbedder,
+    dataloader: DataLoader,
+    criterion: BaseMetricLossFunction,
+    device: torch.device,
+) -> float:
+    model.eval()
+    total_loss = 0
+    for batch in dataloader:
+        step_loss = eval_step(
+            model=model,
+            batch=batch,
+            criterion=criterion,
+            device=device,
+        )
+        total_loss += step_loss
+    return total_loss / len(dataloader)
+

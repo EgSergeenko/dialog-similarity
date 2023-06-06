@@ -59,10 +59,15 @@ class AugmentationModel(object):
 
 
 class SGDDataset(Dataset):
-    def __init__(self, dataset_dir: str, limit: int) -> None:
+    def __init__(
+        self,
+        dataset_dir: str,
+        dialog_ids: list[str] | None = None,
+    ) -> None:
         self.aug_subdir = 'aug'
         self.dataset_dir = dataset_dir
-        self.dialogs = self._load_dialogs()[:limit]
+        self.dialog_ids = dialog_ids
+        self.dialogs = self._load_dialogs()
         self.augmented_dialogs = self._augment_dialogs()
         self.id_2_idx = self._create_mapping()
 
@@ -123,7 +128,11 @@ class SGDDataset(Dataset):
                 dialogs_data = json.load(dialogs_file)
                 for dialog_dict in dialogs_data:
                     dialog = dialog_from_dict(dialog_dict)
-                    dialogs.append(dialog)
+                    if self.dialog_ids is not None:
+                        if dialog.dialog_id in self.dialog_ids:
+                            dialogs.append(dialog)
+                    else:
+                        dialogs.append(dialog)
         return dialogs
 
     def _augment_dialogs(self) -> list[Dialog]:
@@ -185,12 +194,15 @@ def collate_fn(
     )
 
 
-def get_dataloader(dataset: Dataset, batch_size: int) -> DataLoader:
+def get_dataloader(dataset: Dataset, batch_size: int, mode: str) -> DataLoader:
+    shuffle, drop_last = True, True
+    if mode in {'val', 'eval'}:
+        shuffle, drop_last = False, False
     return DataLoader(
         dataset=dataset,
         batch_size=batch_size,
         pin_memory=True,
-        shuffle=True,
-        drop_last=True,
+        shuffle=shuffle,
+        drop_last=drop_last,
         collate_fn=collate_fn,
     )

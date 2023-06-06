@@ -5,3 +5,5 @@ venv/
 .mypy_cache/
 
 assets/
+
+notebooks/checkpoints
